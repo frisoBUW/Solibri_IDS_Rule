@@ -9,10 +9,7 @@ import de.buildingsmart.ids.PropertyType;
 import de.buildingsmart.ids.RequirementsType;
 import de.buildingsmart.ids.SpecificationType;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,20 +31,6 @@ public class Property implements FacetBase, PropertyReference {
 
     }
 
-//    @Override
-//    public ComponentFilter setFilter() {
-//        return component -> {
-//            // Get the collection of PropertySet of the component
-//            Collection<PropertySet> propertySets = component.getPropertySets();
-//            // Get the collection of Property from the specification
-//            List<ApplicabilityType.Property> properties = specification.getApplicability().getProperty();
-//
-//            // Check if the user-defined PropertySet exists in the collection
-//            return propertySets.stream()
-//                    .anyMatch(propertySet -> properties.stream()
-//                            .anyMatch(property -> property.getPropertySet().getSimpleValue().equals(propertySet.getName())));
-//        };
-//    }
 
     /**
      * This method is used to specifically deal with Property(Sets) from IDS. Since ComponentFilter from the Solibri
@@ -65,13 +48,118 @@ public class Property implements FacetBase, PropertyReference {
                     .map(PropertySet::getName)
                     .collect(Collectors.toSet());
 
-            // Get the collection of Property from the specification
-            List<ApplicabilityType.Property> idsApplicabilityProperties = specification.getApplicability().getProperty();
-            Stream<String> idsPropertySetsStrings = idsApplicabilityProperties.stream().map(property -> property.getPropertySet().getSimpleValue());
+            // Get the PropertySets from IDS
+            Stream<String> idsPropertySetsStrings = specification.getApplicability().getProperty()
+                    .stream()
+                    .map(idsPropertySet -> idsPropertySet.getPropertySet().getSimpleValue());
             // Check if the user-defined PropertySet exists in the collection
-            return idsPropertySetsStrings.anyMatch(solPropertySetsSet::contains);
+            boolean psetCheck = idsPropertySetsStrings.anyMatch(solPropertySetsSet::contains);
+
+
+            // Check if the Solibri PropertySet contains the Ids PropertyNames
+            Set<String> solProperty = component.getPropertySets()
+                    .stream()
+                    .flatMap(pset -> pset.getProperties().stream())
+                    .map(com.solibri.smc.api.model.Property::getName)
+                    .collect(Collectors.toSet());
+
+            // Get the Properties from IDS
+            Stream<String> idsPropertyStrings = specification.getApplicability().getProperty()
+                    .stream()
+                    .map(idsProperty -> idsProperty.getName().getSimpleValue());
+            // Check if the user-defined Property exists in the collection
+            boolean propCheck = idsPropertyStrings.anyMatch(solProperty::contains);
+
+
+            // Check if the Solibri PropertySet contains the Ids PropertyValues
+            Set<String> solPropertyValue = component.getPropertySets()
+                    .stream()
+                    .flatMap(pset -> pset.getProperties().stream())
+                    .map(com.solibri.smc.api.model.Property::getValueAsString)
+                    .collect(Collectors.toSet());
+
+            // Get the PropertyValue from IDS
+            Stream<String> idsPropertyValueStrings = specification.getApplicability().getProperty()
+                    .stream()
+                    .map(idsProperty -> idsProperty.getValue().getSimpleValue());
+            // Check if the user-defined PropertyValue exists in the collection
+            boolean propValCheck = idsPropertyValueStrings.anyMatch(solPropertyValue::contains);
+
+            return psetCheck && propCheck && propValCheck;
         };
     }
+
+//    @Override
+//    public ComponentFilter setFilter() {
+//        return component -> {
+//            // Get the collection of PropertySet of the component
+//            Collection<PropertySet> solPropertySets = component.getPropertySets();
+//
+//            // Check if any user-defined PropertySet, Property, and Value exist in the collection
+//            return specification.getApplicability().getProperty().stream().anyMatch(property ->
+//                    solPropertySets.stream().anyMatch(solPropertySet ->
+//                            solPropertySet.getName().equals(property.getPropertySet().getSimpleValue()) &&
+//                            solPropertySet.getProperties().stream().anyMatch(solProperty ->
+//                                    solProperty.getName().equals(property.getName().getSimpleValue()) &&
+//                                    solProperty.getValue().toString().equals(property.getValue().getSimpleValue())
+//                                    )
+//                    )
+//            );
+//        };
+//    }
+
+//    @Override
+//    public ComponentFilter setFilter() {
+//        return component -> {
+//            // Get the collection of PropertySet of the component
+//            Collection<PropertySet> solPropertySets = component.getPropertySets();
+//
+//            // Get the collection of Property from the specification
+//            List<ApplicabilityType.Property> idsApplicabilityProperties = specification.getApplicability().getProperty();
+//
+//            // For each IDS Property
+//            for (ApplicabilityType.Property idsProperty : idsApplicabilityProperties) {
+//                String idsPropertySetName = idsProperty.getPropertySet().getSimpleValue();
+//                String idsPropertyName = idsProperty.getName().getSimpleValue();
+//                String idsPropertyValue = idsProperty.getValue().getSimpleValue();
+//
+//                // Check if there exists a PropertySet in the solibri properties that matches the IDS Property
+//                for (PropertySet solPropertySet : solPropertySets) {
+//                    if (!solPropertySet.getName().equals(idsPropertySetName)) {
+//                        continue;
+//                    }
+//
+//                    // Get the Property of the solibri PropertySet that matches the name of the IDS Property
+//                    Optional<com.solibri.smc.api.model.Property<Object>> solPropertyOptional = solPropertySet.getProperty(idsPropertyName);
+//                    if (!solPropertyOptional.isPresent()) {
+//                        continue;
+//                    }
+//
+//                    com.solibri.smc.api.model.Property<?> solProperty = solPropertyOptional.get();
+//                    if (solProperty.getValue().toString().equals(idsPropertyValue)) {
+//                        // Found a match, return true
+//                        return true;
+//                    }
+//                }
+//            }
+//
+//            // No matching PropertySet, Property, and Value found in the solibri properties
+//            return false;
+//        };
+//    }
+
+//    @Override
+//    public ComponentFilter setFilter() {
+//        return component -> {
+//            // Get the collection of PropertySet of the component
+//            Collection<PropertySet> solPropertySets = component.getPropertySets();
+//            solPropertySets.stream()
+//                    .flatMap(pset -> pset.getProperties().stream())
+//                    .map(com.solibri.smc.api.model.Property::getName)
+//                    .collect(Collectors.toSet());
+//            return
+//        }
+//    }
 
 
     @Override
