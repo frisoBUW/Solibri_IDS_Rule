@@ -59,10 +59,12 @@ public class Property implements FacetBase, PropertyReference {
     @Override
     public ComponentFilter setFilter() {
         return component -> {
-            // Get the collection of PropertySet of the component
-            Collection<PropertySet> solPropertySets = component.getPropertySets();
-            Stream<String> solPropertySetsStrings = solPropertySets.stream().map(PropertySet::getName);
-            Set<String> solPropertySetsSet = solPropertySetsStrings.collect(Collectors.toSet());
+            // Create a Set of PropertySet names from the component
+            Set<String> solPropertySetsSet = component.getPropertySets()
+                    .stream()
+                    .map(PropertySet::getName)
+                    .collect(Collectors.toSet());
+
             // Get the collection of Property from the specification
             List<ApplicabilityType.Property> idsApplicabilityProperties = specification.getApplicability().getProperty();
             Stream<String> idsPropertySetsStrings = idsApplicabilityProperties.stream().map(property -> property.getPropertySet().getSimpleValue());
