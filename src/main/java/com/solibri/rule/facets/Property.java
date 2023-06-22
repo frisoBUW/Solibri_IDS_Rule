@@ -10,6 +10,7 @@ import de.buildingsmart.ids.RequirementsType;
 import de.buildingsmart.ids.SpecificationType;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -43,50 +44,39 @@ public class Property implements FacetBase, PropertyReference {
     public ComponentFilter setFilter() {
         return component -> {
             // Create a Set of PropertySet names from the component
-            Set<String> solPropertySetsSet = component.getPropertySets()
-                    .stream()
-                    .map(PropertySet::getName)
-                    .collect(Collectors.toSet());
+            Set<PropertySet> solPropertySets = new HashSet<>(component.getPropertySets());
 
-            // Get the PropertySets from IDS
-            Stream<String> idsPropertySetsStrings = specification.getApplicability().getProperty()
-                    .stream()
-                    .map(idsPropertySet -> idsPropertySet.getPropertySet().getSimpleValue());
-            // Check if the user-defined PropertySet exists in the collection
-            boolean psetCheck = idsPropertySetsStrings.anyMatch(solPropertySetsSet::contains);
+            // Get the properties from the IDS specification
+            List<ApplicabilityType.Property> idsProperties = specification.getApplicability().getProperty();
 
+            // Check if the user-defined PropertySet, Property, and Value exist in the Solibri collections
+            boolean psetCheck = checkExists(
+                    solPropertySets,
+                    idsProperties,
+                    PropertySet::getName,
+                    idsPropertySet -> idsPropertySet.getPropertySet().getSimpleValue());
 
-            // Check if the Solibri PropertySet contains the Ids PropertyNames
-            Set<String> solProperty = component.getPropertySets()
-                    .stream()
-                    .flatMap(pset -> pset.getProperties().stream())
-                    .map(com.solibri.smc.api.model.Property::getName)
-                    .collect(Collectors.toSet());
+            boolean propCheck = checkExists(
+                    solPropertySets.stream().flatMap(pset -> pset.getProperties().stream()).collect(Collectors.toSet()),
+                    idsProperties,
+                    com.solibri.smc.api.model.Property::getName,
+                    idsProperty -> idsProperty.getName().getSimpleValue());
 
-            // Get the Properties from IDS
-            Stream<String> idsPropertyStrings = specification.getApplicability().getProperty()
-                    .stream()
-                    .map(idsProperty -> idsProperty.getName().getSimpleValue());
-            // Check if the user-defined Property exists in the collection
-            boolean propCheck = idsPropertyStrings.anyMatch(solProperty::contains);
-
-
-            // Check if the Solibri PropertySet contains the Ids PropertyValues
-            Set<String> solPropertyValue = component.getPropertySets()
-                    .stream()
-                    .flatMap(pset -> pset.getProperties().stream())
-                    .map(com.solibri.smc.api.model.Property::getValueAsString)
-                    .collect(Collectors.toSet());
-
-            // Get the PropertyValue from IDS
-            Stream<String> idsPropertyValueStrings = specification.getApplicability().getProperty()
-                    .stream()
-                    .map(idsProperty -> idsProperty.getValue().getSimpleValue());
-            // Check if the user-defined PropertyValue exists in the collection
-            boolean propValCheck = idsPropertyValueStrings.anyMatch(solPropertyValue::contains);
+            boolean propValCheck = checkExists(
+                    solPropertySets.stream().flatMap(pset -> pset.getProperties().stream()).collect(Collectors.toSet()),
+                    idsProperties,
+                    com.solibri.smc.api.model.Property::getValueAsString,
+                    idsProperty -> idsProperty.getValue().getSimpleValue());
 
             return psetCheck && propCheck && propValCheck;
         };
+    }
+
+    private <T, U> boolean checkExists(Collection<T> solCollection, Collection<U> idsCollection,
+                                       Function<T, String> solMapper, Function<U, String> idsMapper) {
+        Set<String> solSet = solCollection.stream().map(solMapper).collect(Collectors.toSet());
+
+        return idsCollection.stream().map(idsMapper).anyMatch(solSet::contains);
     }
 
 //    @Override
