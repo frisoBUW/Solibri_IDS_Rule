@@ -43,32 +43,32 @@ public class Property implements FacetBase, PropertyReference {
     @Override
     public ComponentFilter setFilter() {
         return component -> {
-            // Create a Set of PropertySet names from the component
+            // Create a Set of PropertySets from the currently passed in component
             Set<PropertySet> solPropertySets = new HashSet<>(component.getPropertySets());
 
             // Get the properties from the IDS specification
             List<ApplicabilityType.Property> idsProperties = specification.getApplicability().getProperty();
 
-            // Check if the user-defined PropertySet, Property, and Value exist in the Solibri collections
-            boolean psetCheck = checkExists(
+            // Check if the IDS-defined PropertySet, PropertyName, and PropertyValue exist at the current component
+            boolean psetNameCheck = checkExists(
                     solPropertySets,
                     idsProperties,
                     PropertySet::getName,
                     idsPropertySet -> idsPropertySet.getPropertySet().getSimpleValue());
 
-            boolean propCheck = checkExists(
+            boolean propNameCheck = checkExists(
                     solPropertySets.stream().flatMap(pset -> pset.getProperties().stream()).collect(Collectors.toSet()),
                     idsProperties,
                     com.solibri.smc.api.model.Property::getName,
                     idsProperty -> idsProperty.getName().getSimpleValue());
 
-            boolean propValCheck = checkExists(
+            boolean propValueCheck = checkExists(
                     solPropertySets.stream().flatMap(pset -> pset.getProperties().stream()).collect(Collectors.toSet()),
                     idsProperties,
                     com.solibri.smc.api.model.Property::getValueAsString,
                     idsProperty -> idsProperty.getValue().getSimpleValue());
 
-            return psetCheck && propCheck && propValCheck;
+            return psetNameCheck && propNameCheck && propValueCheck;
         };
     }
 
@@ -78,78 +78,6 @@ public class Property implements FacetBase, PropertyReference {
 
         return idsCollection.stream().map(idsMapper).anyMatch(solSet::contains);
     }
-
-//    @Override
-//    public ComponentFilter setFilter() {
-//        return component -> {
-//            // Get the collection of PropertySet of the component
-//            Collection<PropertySet> solPropertySets = component.getPropertySets();
-//
-//            // Check if any user-defined PropertySet, Property, and Value exist in the collection
-//            return specification.getApplicability().getProperty().stream().anyMatch(property ->
-//                    solPropertySets.stream().anyMatch(solPropertySet ->
-//                            solPropertySet.getName().equals(property.getPropertySet().getSimpleValue()) &&
-//                            solPropertySet.getProperties().stream().anyMatch(solProperty ->
-//                                    solProperty.getName().equals(property.getName().getSimpleValue()) &&
-//                                    solProperty.getValue().toString().equals(property.getValue().getSimpleValue())
-//                                    )
-//                    )
-//            );
-//        };
-//    }
-
-//    @Override
-//    public ComponentFilter setFilter() {
-//        return component -> {
-//            // Get the collection of PropertySet of the component
-//            Collection<PropertySet> solPropertySets = component.getPropertySets();
-//
-//            // Get the collection of Property from the specification
-//            List<ApplicabilityType.Property> idsApplicabilityProperties = specification.getApplicability().getProperty();
-//
-//            // For each IDS Property
-//            for (ApplicabilityType.Property idsProperty : idsApplicabilityProperties) {
-//                String idsPropertySetName = idsProperty.getPropertySet().getSimpleValue();
-//                String idsPropertyName = idsProperty.getName().getSimpleValue();
-//                String idsPropertyValue = idsProperty.getValue().getSimpleValue();
-//
-//                // Check if there exists a PropertySet in the solibri properties that matches the IDS Property
-//                for (PropertySet solPropertySet : solPropertySets) {
-//                    if (!solPropertySet.getName().equals(idsPropertySetName)) {
-//                        continue;
-//                    }
-//
-//                    // Get the Property of the solibri PropertySet that matches the name of the IDS Property
-//                    Optional<com.solibri.smc.api.model.Property<Object>> solPropertyOptional = solPropertySet.getProperty(idsPropertyName);
-//                    if (!solPropertyOptional.isPresent()) {
-//                        continue;
-//                    }
-//
-//                    com.solibri.smc.api.model.Property<?> solProperty = solPropertyOptional.get();
-//                    if (solProperty.getValue().toString().equals(idsPropertyValue)) {
-//                        // Found a match, return true
-//                        return true;
-//                    }
-//                }
-//            }
-//
-//            // No matching PropertySet, Property, and Value found in the solibri properties
-//            return false;
-//        };
-//    }
-
-//    @Override
-//    public ComponentFilter setFilter() {
-//        return component -> {
-//            // Get the collection of PropertySet of the component
-//            Collection<PropertySet> solPropertySets = component.getPropertySets();
-//            solPropertySets.stream()
-//                    .flatMap(pset -> pset.getProperties().stream())
-//                    .map(com.solibri.smc.api.model.Property::getName)
-//                    .collect(Collectors.toSet());
-//            return
-//        }
-//    }
 
 
     @Override
