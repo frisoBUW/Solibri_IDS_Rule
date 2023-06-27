@@ -14,17 +14,13 @@ public class Parts implements FacetBase {
 //    }
 
     @Override
-    public void setApplicability(ApplicabilityType applicability) {
-
-    }
-
-    @Override
-    public void setRequirement(RequirementsType requirement) {
-
-    }
-
-    @Override
-    public ComponentFilter setFilter() {
+    public ComponentFilter setApplicability() {
         return null;
     }
+
+    @Override
+    public ComponentFilter setRequirement() {
+        return null;
+    }
+
 }

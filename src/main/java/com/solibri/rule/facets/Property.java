@@ -1,37 +1,22 @@
 package com.solibri.rule.facets;
 
-import com.solibri.rule.utils.Result;
 import com.solibri.smc.api.filter.ComponentFilter;
-import com.solibri.smc.api.model.PropertyReference;
 import com.solibri.smc.api.model.PropertySet;
 import de.buildingsmart.ids.ApplicabilityType;
-import de.buildingsmart.ids.PropertyType;
 import de.buildingsmart.ids.RequirementsType;
 import de.buildingsmart.ids.SpecificationType;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-public class Property implements FacetBase, PropertyReference {
+public class Property implements FacetBase {
 
     private final SpecificationType specification;
 
     public Property(SpecificationType specification) {
         this.specification = specification;
     }
-
-    @Override
-    public void setApplicability(ApplicabilityType applicability) {
-
-    }
-
-    @Override
-    public void setRequirement(RequirementsType requirement) {
-
-    }
-
 
     /**
      * This method is used to specifically deal with Property(Sets) from IDS. Since ComponentFilter from the Solibri
@@ -41,7 +26,7 @@ public class Property implements FacetBase, PropertyReference {
      * @return ComponentFilter
      */
     @Override
-    public ComponentFilter setFilter() {
+    public ComponentFilter setApplicability() {
         return component -> {
             // Create a Set of PropertySets from the currently passed in component
             Set<PropertySet> solPropertySets = new HashSet<>(component.getPropertySets());
@@ -79,16 +64,51 @@ public class Property implements FacetBase, PropertyReference {
         return idsCollection.stream().map(idsMapper).anyMatch(solSet::contains);
     }
 
-
     @Override
-    public String getPropertySetName() {
-        return null;
-//        return property.getPropertySet().getSimpleValue();
+    public ComponentFilter setRequirement() {
+        return component -> {
+            // Create a Set of PropertySets from the currently passed in component
+            Set<PropertySet> solPropertySets = new HashSet<>(component.getPropertySets());
+            // Get the properties from the IDS specification
+            // Fetch IDS Requirement Properties
+            List<RequirementsType.Property> idsRequirementProperties = getIdsRequirementProperties(specification);
+
+            // Check if the IDS-defined PropertySet, PropertyName, and PropertyValue exist at the current component
+            boolean psetNameCheck = checkExists(
+                    solPropertySets,
+                    idsRequirementProperties,
+                    PropertySet::getName,
+                    idsPropertySet -> idsPropertySet.getPropertySet().getSimpleValue());
+
+            boolean propNameCheck = checkExists(
+                    solPropertySets.stream().flatMap(pset -> pset.getProperties().stream()).collect(Collectors.toSet()),
+                    idsRequirementProperties,
+                    com.solibri.smc.api.model.Property::getName,
+                    idsProperty -> idsProperty.getName().getSimpleValue());
+
+            boolean propValueCheck = checkExists(
+                    solPropertySets.stream().flatMap(pset -> pset.getProperties().stream()).collect(Collectors.toSet()),
+                    idsRequirementProperties,
+                    com.solibri.smc.api.model.Property::getValueAsString,
+                    idsProperty -> idsProperty.getValue().getSimpleValue());
+
+            return psetNameCheck && propNameCheck && propValueCheck;
+        };
     }
 
-    @Override
-    public String getPropertyName() {
-        return null;
-//        return property.getName().getSimpleValue();
+    // New method to fetch IDS Requirement Properties
+    private List<RequirementsType.Property> getIdsRequirementProperties(SpecificationType specification) {
+        List<Object> entitiesAndClassifications = specification.getRequirements().getEntityAndPartOfAndClassification();
+        List<RequirementsType.Property> idsRequirementProperties = new ArrayList<>();
+        for (Object obj : entitiesAndClassifications) {
+            if (obj instanceof RequirementsType.Property) {
+                RequirementsType.Property propElement = (RequirementsType.Property) obj;
+                idsRequirementProperties.add(propElement);
+            }
+        }
+        return idsRequirementProperties;
     }
+
+
+
 }

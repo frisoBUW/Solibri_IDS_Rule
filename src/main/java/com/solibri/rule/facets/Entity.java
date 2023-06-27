@@ -4,71 +4,86 @@ import com.solibri.rule.utils.Result;
 import com.solibri.smc.api.filter.ComponentFilter;
 import com.solibri.smc.api.ifc.IfcEntityType;
 import com.solibri.smc.api.model.ComponentType;
+import com.solibri.smc.api.model.Material;
 import de.buildingsmart.ids.ApplicabilityType;
 import de.buildingsmart.ids.EntityType;
 import de.buildingsmart.ids.RequirementsType;
 import de.buildingsmart.ids.SpecificationType;
 
 import java.lang.module.ModuleFinder;
+import java.util.List;
+import java.util.Optional;
 
 public class Entity implements FacetBase {
-    private SpecificationType specification;
-    private ComponentFilter componentFilter;
+    private final SpecificationType specification;
 
-    private final String applicableEntity = specification.getApplicability().getEntity().getName().getSimpleValue();
-    private final String applicablePreDefinedType = specification.getApplicability().getEntity().getPredefinedType().getSimpleValue();
-    //private final EntityType requiredEntity = specification.getRequirements(); //Issue
+    private final String applicableEntity;
+    private final String applicablePreDefinedType;
 
     public Entity(SpecificationType specification) {
         this.specification = specification;
+
+        this.applicableEntity = specification.getApplicability() != null &&
+                specification.getApplicability().getEntity() != null &&
+                specification.getApplicability().getEntity().getName() != null ?
+                specification.getApplicability().getEntity().getName().getSimpleValue() :
+                "";
+        this.applicablePreDefinedType = specification.getApplicability() != null &&
+                specification.getApplicability().getEntity() != null &&
+                specification.getApplicability().getEntity().getPredefinedType() != null ?
+                specification.getApplicability().getEntity().getPredefinedType().getSimpleValue() : "";
     }
 
     @Override
-    public void setApplicability(ApplicabilityType applicability) {
-        String convertedName = convertToEnumFormat(applicableEntity); //ToDo implement error handling if no entity is provided or entity is not checkable
-        ComponentType componentType;
-        try {componentType = ComponentType.valueOf(convertedName);
-        } catch (IllegalArgumentException e) {
-            componentType = null;
+    public ComponentFilter setApplicability() { //ToDo implement multiLevel checking
+        return component -> {
+            if (specification.getApplicability().getEntity() == null) {
+                // If not, return true to avoid any filtering based on Entity
+                return true;
+            }
+
+            Optional<IfcEntityType> solIfcEntityType = component.getIfcEntityType();
+
+            // Check if the IDS-defined Entity matches the current component
+            return solIfcEntityType.stream().anyMatch(ifcEntityType -> ifcEntityType.equals(IfcEntityType.valueOf(applicableEntity)));
+            };
         }
-        if (componentType != null) {
-            componentFilter = ComponentFilter.componentTypeIs(componentType);
-            IfcEntityType entityType = IfcEntityType.valueOf(applicableEntity);
-            Class<?> entityClass = entityType.getClass();
-            ComponentFilter cf = ComponentFilter.componentClassIs(entityClass);
-        }
-    }
 
     @Override
-    public void setRequirement(RequirementsType requirement) {
+    public ComponentFilter setRequirement() {
+        // Check if the IDS specification has an Entity requirement
+        if (getIdsRequirementEntity(specification) == null) {
+            // If not, return true to avoid any filtering based on Entity
+            return component -> true;
+        }
 
+        // Get the IDS Entity requirement
+        EntityType idsRequirementEntity = getIdsRequirementEntity(specification);
+
+        IfcEntityType entityType = IfcEntityType.valueOf(applicableEntity);
+        String entityTypeValue = String.valueOf(entityType.getClass());
+
+        return component -> {
+            // Check if the IDS-defined Entity exists at the current component
+            // Assume that 'getType()' method returns the entity type of the component
+            Class<?> componentEntityClass = component.getIfcEntityType().getClass();
+            return entityTypeValue.contains("IfcWall");
+        };
     }
 
 
-    @Override
-    public ComponentFilter setFilter() {
-        return null;
-     }
-
-
-    public String convertToEnumFormat(String str) {
-        // remove the "Ifc" prefix
-        str = str.replaceFirst("Ifc", "");
-
-        // check if the string contains "StandardCase" and replace it
-        if (str.contains("StandardCase")) {
-        str = str.replace("StandardCase", "");
+    // New method to fetch IDS Requirement Entity
+    private EntityType getIdsRequirementEntity(SpecificationType specification) {
+        if (specification.getRequirements() == null ||
+                specification.getRequirements().getEntityAndPartOfAndClassification() == null) {
+            return null;
         }
 
-        // replace uppercase characters with underscore followed by the character, then convert all to upper case
-        String converted = str.replaceAll("(.)(\\p{Upper})", "$1_$2").toUpperCase();
+        Object entity = specification.getRequirements().getEntityAndPartOfAndClassification().stream()
+                .filter(obj -> obj instanceof EntityType)
+                .findFirst()
+                .orElse(null);
 
-        // if there is a leading underscore (from the first uppercase after "Ifc"), remove it
-        if (converted.startsWith("_")) {
-        converted = converted.substring(1);
-        }
-
-        return converted;
+        return (entity instanceof EntityType) ? (EntityType) entity : null;
     }
 }
-

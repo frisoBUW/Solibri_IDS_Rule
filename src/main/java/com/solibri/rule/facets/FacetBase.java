@@ -16,7 +16,6 @@ public interface FacetBase {
 //        return componentFilter;
 //    }
 
-    public void setApplicability(ApplicabilityType applicability);
-    public void setRequirement(RequirementsType requirement);
-    public abstract ComponentFilter setFilter();
+    public ComponentFilter setApplicability();
+    public ComponentFilter setRequirement();
 }
